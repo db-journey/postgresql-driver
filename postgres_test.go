@@ -7,12 +7,12 @@ import (
 	"testing"
 
 	"github.com/db-journey/migrate/file"
-	"github.com/db-journey/migrate/migrate/direction"
+	"github.com/db-journey/migrate/direction"
 	pipep "github.com/db-journey/migrate/pipe"
 )
 
 // TestMigrate runs some additional tests on Migrate().
-// Basic testing is already done in migrate/migrate_test.go
+// Basic testing is already done in migrate_test.go
 func TestMigrate(t *testing.T) {
 	host := os.Getenv("POSTGRES_PORT_5432_TCP_ADDR")
 	port := os.Getenv("POSTGRES_PORT_5432_TCP_PORT")

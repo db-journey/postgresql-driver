@@ -10,9 +10,9 @@
 ## Usage
 
 ```bash
-migrate -url postgres://user@host:port/database -path ./db/migrations create add_field_to_table
-migrate -url postgres://user@host:port/database -path ./db/migrations up
-migrate help # for more info
+journey -url postgres://user@host:port/database -path ./db/migrations create add_field_to_table
+journey -url postgres://user@host:port/database -path ./db/migrations up
+journey help # for more info
 
 ## Disable DDL transactions
 

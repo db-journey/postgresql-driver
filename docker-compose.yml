@@ -1,6 +1,6 @@
 go: &go
   image: golang
-  working_dir: /go/src/github.com/db-journey/migrate
+  working_dir: /go/src/github.com/db-journey/postgresql-driver
   volumes:
     - $GOPATH:/go
 go-test:
@@ -8,9 +8,6 @@ go-test:
   command: sh -c 'go get -t -v ./... && go test -p=1 -v ./...'
   links:
     - postgres
-    - mysql
-    - cassandra
-    - crate
 go-build:
   <<: *go
   command: sh -c 'go get -v && go build -ldflags ''-s'' -o migrater'

@@ -8,10 +8,5 @@ go-test:
   command: sh -c 'go get -t -v ./... && go test -p=1 -v ./...'
   links:
     - postgres
-go-build:
-  <<: *go
-  command: sh -c 'go get -v && go build -ldflags ''-s'' -o migrater'
-  environment:
-    CGO_ENABLED: 1
 postgres:
   image: postgres

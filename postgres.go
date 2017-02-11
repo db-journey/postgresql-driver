@@ -47,7 +47,7 @@ func (driver *Driver) Close() error {
 func (driver *Driver) ensureVersionTableExists() error {
 	// avoid DDL statements if possible for BDR (see #23)
 	var c int
-	driver.db.Get(&c, "SELECT count(*) FROM information_schema.tables WHERE table_name = $1;", tableName)
+	driver.db.Get(&c, "SELECT count(*) FROM information_schema.tables WHERE table_name = $1", tableName)
 	if c > 0 {
 		// table schema_migrations already exists, check if the schema is correct, ie: version is a bigint
 
@@ -65,7 +65,7 @@ func (driver *Driver) ensureVersionTableExists() error {
 		return err
 	}
 
-	_, err := driver.db.Exec("CREATE TABLE IF NOT EXISTS " + tableName + " (version bigint not null primary key);")
+	_, err := driver.db.Exec("CREATE TABLE IF NOT EXISTS " + tableName + " (version bigint not null primary key)")
 	return err
 }
 

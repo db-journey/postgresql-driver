@@ -156,7 +156,7 @@ func (driver *Driver) Versions() (file.Versions, error) {
 // fileOptions returns the list of options extracted from the first line of the file content.
 // Format: "-- <option1> <option2> <...>"
 func fileOptions(content []byte) []string {
-	firstLine := strings.Split(string(content), "\n")[0]
+	firstLine := strings.SplitN(string(content), "\n", 2)[0]
 	if !strings.HasPrefix(firstLine, "-- ") {
 		return []string{}
 	}

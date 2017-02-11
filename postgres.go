@@ -84,24 +84,24 @@ func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
 	}
 
 	if f.Direction == direction.Up {
-		if _, err := tx.Exec("INSERT INTO "+tableName+" (version) VALUES ($1)", f.Version); err != nil {
+		if _, err = tx.Exec("INSERT INTO "+tableName+" (version) VALUES ($1)", f.Version); err != nil {
 			pipe <- err
-			if err := tx.Rollback(); err != nil {
+			if err = tx.Rollback(); err != nil {
 				pipe <- err
 			}
 			return
 		}
 	} else if f.Direction == direction.Down {
-		if _, err := tx.Exec("DELETE FROM "+tableName+" WHERE version=$1", f.Version); err != nil {
+		if _, err = tx.Exec("DELETE FROM "+tableName+" WHERE version=$1", f.Version); err != nil {
 			pipe <- err
-			if err := tx.Rollback(); err != nil {
+			if err = tx.Rollback(); err != nil {
 				pipe <- err
 			}
 			return
 		}
 	}
 
-	if err := f.ReadContent(); err != nil {
+	if err = f.ReadContent(); err != nil {
 		pipe <- err
 		return
 	}

@@ -14,6 +14,8 @@ import (
 	"github.com/lib/pq"
 )
 
+var _ driver.Driver = (*Driver)(nil)
+
 type Driver struct {
 	db *sqlx.DB
 }

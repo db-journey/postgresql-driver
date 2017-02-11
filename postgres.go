@@ -48,24 +48,24 @@ func (driver *Driver) ensureVersionTableExists() error {
 	// avoid DDL statements if possible for BDR (see #23)
 	var c int
 	driver.db.Get(&c, "SELECT count(*) FROM information_schema.tables WHERE table_name = $1", tableName)
-	if c > 0 {
-		// table schema_migrations already exists, check if the schema is correct, ie: version is a bigint
-
-		var dataType string
-		err := driver.db.Get(&dataType, "SELECT data_type FROM information_schema.columns where table_name = $1 and column_name = 'version'", tableName)
-		if err != nil {
-			return err
-		}
-
-		if dataType == "bigint" {
-			return nil
-		}
-
-		_, err = driver.db.Exec("ALTER TABLE " + tableName + " ALTER COLUMN version TYPE bigint USING version::bigint")
+	if c <= 0 {
+		_, err := driver.db.Exec("CREATE TABLE IF NOT EXISTS " + tableName + " (version bigint not null primary key)")
 		return err
 	}
 
-	_, err := driver.db.Exec("CREATE TABLE IF NOT EXISTS " + tableName + " (version bigint not null primary key)")
+	// table schema_migrations already exists, check if the schema is correct, ie: version is a bigint
+
+	var dataType string
+	err := driver.db.Get(&dataType, "SELECT data_type FROM information_schema.columns where table_name = $1 and column_name = 'version'", tableName)
+	if err != nil {
+		return err
+	}
+
+	if dataType == "bigint" {
+		return nil
+	}
+
+	_, err = driver.db.Exec("ALTER TABLE " + tableName + " ALTER COLUMN version TYPE bigint USING version::bigint")
 	return err
 }
 

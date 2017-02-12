@@ -16,6 +16,7 @@ import (
 
 var _ driver.Driver = (*Driver)(nil)
 
+// Driver is the postgres driver for journey.
 type Driver struct {
 	db *sqlx.DB
 }
@@ -23,6 +24,7 @@ type Driver struct {
 const tableName = "schema_migrations"
 const txDisabledOption = "disable_ddl_transaction"
 
+// Initialize opens and verifies the database handle.
 func (driver *Driver) Initialize(url string) error {
 	db, err := sqlx.Open("postgres", url)
 	if err != nil {
@@ -36,10 +38,12 @@ func (driver *Driver) Initialize(url string) error {
 	return driver.ensureVersionTableExists()
 }
 
+// SetDB replaces the current database handle.
 func (driver *Driver) SetDB(db *sql.DB) {
 	driver.db = sqlx.NewDb(db, "postgres")
 }
 
+// Close closes the database handle.
 func (driver *Driver) Close() error {
 	return driver.db.Close()
 }
@@ -69,10 +73,12 @@ func (driver *Driver) ensureVersionTableExists() error {
 	return err
 }
 
+// FilenameExtension returns "sql".
 func (driver *Driver) FilenameExtension() string {
 	return "sql"
 }
 
+// Migrate performs the migration of any one file.
 func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
 	defer close(pipe)
 	pipe <- f

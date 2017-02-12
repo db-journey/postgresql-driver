@@ -1,5 +1,8 @@
 # PostgreSQL Driver
 
+[![Build Status](https://travis-ci.org/db-journey/postgresql-driver.svg?branch=master)](https://travis-ci.org/db-journey/postgresql-driver)
+[![GoDoc](https://godoc.org/github.com/db-journey/journey?status.svg)](https://godoc.org/github.com/db-journey/journey)
+
 * Runs migrations in transactions.
   That means that if a migration fails, it will be safely rolled back.
 * Tries to return helpful error messages.

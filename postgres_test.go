@@ -16,17 +16,17 @@ import (
 func TestMigrate(t *testing.T) {
 	host := os.Getenv("POSTGRES_PORT_5432_TCP_ADDR")
 	port := os.Getenv("POSTGRES_PORT_5432_TCP_PORT")
-	driverUrl := "postgres://postgres@" + host + ":" + port + "/template1?sslmode=disable"
+	driverURL := "postgres://postgres@" + host + ":" + port + "/template1?sslmode=disable"
 
 	// prepare clean database
-	connection, err := sql.Open("postgres", driverUrl)
+	connection, err := sql.Open("postgres", driverURL)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	dropTestTables(t, connection)
 
-	migrate(t, driverUrl)
+	migrate(t, driverURL)
 
 	dropTestTables(t, connection)
 
@@ -36,17 +36,17 @@ func TestMigrate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	migrate(t, driverUrl)
+	migrate(t, driverURL)
 }
 
-func migrate(t *testing.T, driverUrl string) {
+func migrate(t *testing.T, driverURL string) {
 	d := &Driver{}
-	if err := d.Initialize(driverUrl); err != nil {
+	if err := d.Initialize(driverURL); err != nil {
 		t.Fatal(err)
 	}
 
 	// testing idempotency: second call should be a no-op, since table already exists
-	if err := d.Initialize(driverUrl); err != nil {
+	if err := d.Initialize(driverURL); err != nil {
 		t.Fatal(err)
 	}
 

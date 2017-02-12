@@ -10,7 +10,6 @@ import (
 	"github.com/db-journey/migrate/direction"
 	"github.com/db-journey/migrate/driver"
 	"github.com/db-journey/migrate/file"
-	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
 
@@ -18,7 +17,7 @@ var _ driver.Driver = (*Driver)(nil)
 
 // Driver is the postgres driver for journey.
 type Driver struct {
-	db *sqlx.DB
+	db *sql.DB
 }
 
 const tableName = "schema_migrations"
@@ -26,7 +25,7 @@ const txDisabledOption = "disable_ddl_transaction"
 
 // Initialize opens and verifies the database handle.
 func (driver *Driver) Initialize(url string) error {
-	db, err := sqlx.Open("postgres", url)
+	db, err := sql.Open("postgres", url)
 	if err != nil {
 		return err
 	}
@@ -40,7 +39,7 @@ func (driver *Driver) Initialize(url string) error {
 
 // SetDB replaces the current database handle.
 func (driver *Driver) SetDB(db *sql.DB) {
-	driver.db = sqlx.NewDb(db, "postgres")
+	driver.db = db
 }
 
 // Close closes the database handle.
@@ -51,7 +50,10 @@ func (driver *Driver) Close() error {
 func (driver *Driver) ensureVersionTableExists() error {
 	// avoid DDL statements if possible for BDR (see #23)
 	var c int
-	driver.db.Get(&c, "SELECT count(*) FROM information_schema.tables WHERE table_name = $1", tableName)
+	if err := driver.db.QueryRow("SELECT count(*) FROM information_schema.tables WHERE table_name = $1", tableName).Scan(&c); err != nil {
+		return err
+	}
+
 	if c <= 0 {
 		_, err := driver.db.Exec("CREATE TABLE IF NOT EXISTS " + tableName + " (version bigint not null primary key)")
 		return err
@@ -60,8 +62,7 @@ func (driver *Driver) ensureVersionTableExists() error {
 	// table schema_migrations already exists, check if the schema is correct, ie: version is a bigint
 
 	var dataType string
-	err := driver.db.Get(&dataType, "SELECT data_type FROM information_schema.columns where table_name = $1 and column_name = 'version'", tableName)
-	if err != nil {
+	if err := driver.db.QueryRow("SELECT data_type FROM information_schema.columns where table_name = $1 and column_name = 'version'", tableName).Scan(&dataType); err != nil {
 		return err
 	}
 
@@ -69,7 +70,7 @@ func (driver *Driver) ensureVersionTableExists() error {
 		return nil
 	}
 
-	_, err = driver.db.Exec("ALTER TABLE " + tableName + " ALTER COLUMN version TYPE bigint USING version::bigint")
+	_, err := driver.db.Exec("ALTER TABLE " + tableName + " ALTER COLUMN version TYPE bigint USING version::bigint")
 	return err
 }
 
@@ -144,7 +145,7 @@ func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
 // Version returns the current migration version.
 func (driver *Driver) Version() (file.Version, error) {
 	var version file.Version
-	err := driver.db.Get(&version, "SELECT version FROM "+tableName+" ORDER BY version DESC LIMIT 1")
+	err := driver.db.QueryRow("SELECT version FROM " + tableName + " ORDER BY version DESC LIMIT 1").Scan(&version)
 	if err == sql.ErrNoRows {
 		return version, nil
 	}
@@ -154,8 +155,25 @@ func (driver *Driver) Version() (file.Version, error) {
 
 // Versions returns the list of applied migrations.
 func (driver *Driver) Versions() (file.Versions, error) {
+	rows, err := driver.db.Query("SELECT version FROM " + tableName + " ORDER BY version DESC")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
 	versions := file.Versions{}
-	err := driver.db.Select(&versions, "SELECT version FROM "+tableName+" ORDER BY version DESC")
+	for rows.Next() {
+		var version file.Version
+		if err = rows.Scan(&version); err != nil {
+			return nil, err
+		}
+		versions = append(versions, version)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return versions, err
 }
 

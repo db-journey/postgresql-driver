@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/db-journey/migrate/file"
 	"github.com/db-journey/migrate/direction"
+	"github.com/db-journey/migrate/file"
 	pipep "github.com/db-journey/migrate/pipe"
 )
 
@@ -149,7 +149,28 @@ func migrate(t *testing.T, driverUrl string) {
 
 	colors := []string{}
 	expectedColors := []string{"red", "blue", "green"}
-	d.db.Select(&colors, "SELECT unnest(enum_range(NULL::colors));")
+
+	rows, err := d.db.Query("SELECT unnest(enum_range(NULL::colors));")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var color string
+		if err = rows.Scan(&color); err != nil {
+			t.Error(err)
+			return
+		}
+		colors = append(colors, color)
+	}
+
+	if err = rows.Err(); err != nil {
+		t.Error(err)
+		return
+	}
+
 	if !reflect.DeepEqual(colors, expectedColors) {
 		t.Errorf("Expected colors enum to be %q, got %q\n", expectedColors, colors)
 	}

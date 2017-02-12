@@ -5,12 +5,13 @@ go:
   - 1.6
   - 1.7
 
-go_import_path: github.com/db-journey/migrate
-
 services:
   - docker
 
 before_install:
-    - sed -i -e 's/golang/golang:'"$TRAVIS_GO_VERSION"'/' docker-compose.yml
+  - sed -i -e 's/golang/golang:'"$TRAVIS_GO_VERSION"'/' docker-compose.yml
+
+install:
+  - go get -t -v github.com/db-journey/postgresql-driver
 
 script: make test

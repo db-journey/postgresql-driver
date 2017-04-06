@@ -23,6 +23,9 @@ type Driver struct {
 const tableName = "schema_migrations"
 const txDisabledOption = "disable_ddl_transaction"
 
+// make sure our driver still implements the driver.Driver interface
+var _ driver.Driver = (*Driver)(nil)
+
 // Initialize opens and verifies the database handle.
 func (driver *Driver) Initialize(url string) error {
 	db, err := sql.Open("postgres", url)
@@ -177,6 +180,12 @@ func (driver *Driver) Versions() (file.Versions, error) {
 	return versions, err
 }
 
+// Execute a SQL statement
+func (driver *Driver) Execute(statement string) error {
+	_, err := driver.db.Exec(statement)
+	return err
+}
+
 // fileOptions returns the list of options extracted from the first line of the file content.
 // Format: "-- <option1> <option2> <...>"
 func fileOptions(content []byte) []string {
@@ -198,5 +207,10 @@ func txDisabled(opts []string) bool {
 }
 
 func init() {
-	driver.RegisterDriver("postgres", &Driver{})
+	// According to the PostgreSQL documentation (section 32.1.1.2), postgres
+	// library supports two URI schemes: postgresql:// and postgres://
+	// https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNSTRING
+	drv := Driver{}
+	driver.RegisterDriver("postgres", &drv)
+	driver.RegisterDriver("postgresql", &drv)
 }

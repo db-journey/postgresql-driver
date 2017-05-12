@@ -20,7 +20,7 @@ type Driver struct {
 	db *sql.DB
 }
 
-const tableName = "schema_migrations"
+const tableName = "public.schema_migrations"
 const txDisabledOption = "disable_ddl_transaction"
 
 // make sure our driver still implements the driver.Driver interface

@@ -31,7 +31,7 @@ func TestMigrate(t *testing.T) {
 	dropTestTables(t, connection)
 
 	// Make an old-style `int` version column that we'll have to upgrade.
-	_, err = connection.Exec("CREATE TABLE IF NOT EXISTS " + tableName + " (version int not null primary key)")
+	_, err = connection.Exec("CREATE TABLE IF NOT EXISTS " + tableName + " (version bigint not null primary key)")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -85,6 +85,7 @@ func (driver *Driver) FilenameExtension() string {
 // Migrate performs the migration of any one file.
 func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
 	defer close(pipe)
+	var err error
 	pipe <- f
 
 	tx, err := driver.db.Begin()
@@ -92,21 +93,23 @@ func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
 		pipe <- err
 		return
 	}
+	defer func() {
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				pipe <- err
+			}
+		}
+
+	}()
 
 	if f.Direction == direction.Up {
 		if _, err = tx.Exec("INSERT INTO "+tableName+" (version) VALUES ($1)", f.Version); err != nil {
 			pipe <- err
-			if err = tx.Rollback(); err != nil {
-				pipe <- err
-			}
 			return
 		}
 	} else if f.Direction == direction.Down {
 		if _, err = tx.Exec("DELETE FROM "+tableName+" WHERE version=$1", f.Version); err != nil {
 			pipe <- err
-			if err = tx.Rollback(); err != nil {
-				pipe <- err
-			}
 			return
 		}
 	}
@@ -131,10 +134,6 @@ func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
 			pipe <- fmt.Errorf("%s %v: %s in line %v, column %v:\n\n%s", pqErr.Severity, pqErr.Code, pqErr.Message, lineNo, columnNo, string(errorPart))
 		} else {
 			pipe <- fmt.Errorf("%s %v: %s", pqErr.Severity, pqErr.Code, pqErr.Message)
-		}
-
-		if err := tx.Rollback(); err != nil {
-			pipe <- err
 		}
 		return
 	}

@@ -82,41 +82,37 @@ func (driver *Driver) FilenameExtension() string {
 	return "sql"
 }
 
-// Migrate performs the migration of any one file.
-func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
-	defer close(pipe)
-	var err error
-	pipe <- f
+// FileTemplate ...
+func (driver *Driver) FileTemplate() []byte {
+	// TODO ?
+	return []byte("")
+}
 
-	tx, err := driver.db.Begin()
+// Migrate performs the migration of any one file.
+func (driver *Driver) Migrate(f file.File) (err error) {
+	var tx *sql.Tx
+	tx, err = driver.db.Begin()
 	if err != nil {
-		pipe <- err
-		return
+		return err
 	}
 	defer func() {
 		if err != nil {
-			if err := tx.Rollback(); err != nil {
-				pipe <- err
-			}
+			tx.Rollback()
 		}
-
 	}()
 
 	if f.Direction == direction.Up {
 		if _, err = tx.Exec("INSERT INTO "+tableName+" (version) VALUES ($1)", f.Version); err != nil {
-			pipe <- err
-			return
+			return err
 		}
 	} else if f.Direction == direction.Down {
 		if _, err = tx.Exec("DELETE FROM "+tableName+" WHERE version=$1", f.Version); err != nil {
-			pipe <- err
-			return
+			return err
 		}
 	}
 
 	if err = f.ReadContent(); err != nil {
-		pipe <- err
-		return
+		return err
 	}
 
 	if txDisabled(fileOptions(f.Content)) {
@@ -131,17 +127,12 @@ func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
 		if err == nil && offset >= 0 {
 			lineNo, columnNo := file.LineColumnFromOffset(f.Content, offset-1)
 			errorPart := file.LinesBeforeAndAfter(f.Content, lineNo, 5, 5, true)
-			pipe <- fmt.Errorf("%s %v: %s in line %v, column %v:\n\n%s", pqErr.Severity, pqErr.Code, pqErr.Message, lineNo, columnNo, string(errorPart))
-		} else {
-			pipe <- fmt.Errorf("%s %v: %s", pqErr.Severity, pqErr.Code, pqErr.Message)
+			return fmt.Errorf("%s %v: %s in line %v, column %v:\n\n%s", pqErr.Severity, pqErr.Code, pqErr.Message, lineNo, columnNo, string(errorPart))
 		}
-		return
+		return fmt.Errorf("%s %v: %s", pqErr.Severity, pqErr.Code, pqErr.Message)
 	}
 
-	if err := tx.Commit(); err != nil {
-		pipe <- err
-		return
-	}
+	return tx.Commit()
 }
 
 // Version returns the current migration version.

@@ -8,15 +8,14 @@ import (
 
 	"github.com/db-journey/migrate/direction"
 	"github.com/db-journey/migrate/file"
-	pipep "github.com/db-journey/migrate/pipe"
 )
 
 // TestMigrate runs some additional tests on Migrate().
 // Basic testing is already done in migrate_test.go
 func TestMigrate(t *testing.T) {
-	host := os.Getenv("POSTGRES_PORT_5432_TCP_ADDR")
-	port := os.Getenv("POSTGRES_PORT_5432_TCP_PORT")
-	driverURL := "postgres://postgres@" + host + ":" + port + "/template1?sslmode=disable"
+	host := getenvDefault("POSTGRES_PORT_5432_TCP_ADDR", "localhost")
+	port := getenvDefault("POSTGRES_PORT_5432_TCP_PORT", "5432")
+	driverURL := "postgres://postgres:p@" + host + ":" + port + "/template1?sslmode=disable"
 
 	// prepare clean database
 	connection, err := sql.Open("postgres", driverURL)
@@ -112,11 +111,9 @@ func migrate(t *testing.T, driverURL string) {
 	}
 
 	// should create table yolo
-	pipe := pipep.New()
-	go d.Migrate(files[0], pipe)
-	errs := pipep.ReadErrors(pipe)
-	if len(errs) > 0 {
-		t.Fatal(errs)
+	err := d.Migrate(files[0])
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	version, err := d.Version()
@@ -140,11 +137,9 @@ func migrate(t *testing.T, driverURL string) {
 	}
 
 	// should alter type colors
-	pipe = pipep.New()
-	go d.Migrate(files[2], pipe)
-	errs = pipep.ReadErrors(pipe)
-	if len(errs) > 0 {
-		t.Fatal(errs)
+	err = d.Migrate(files[2])
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	colors := []string{}
@@ -175,24 +170,18 @@ func migrate(t *testing.T, driverURL string) {
 		t.Errorf("Expected colors enum to be %q, got %q\n", expectedColors, colors)
 	}
 
-	pipe = pipep.New()
-	go d.Migrate(files[3], pipe)
-	errs = pipep.ReadErrors(pipe)
-	if len(errs) > 0 {
-		t.Fatal(errs)
+	err = d.Migrate(files[3])
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	pipe = pipep.New()
-	go d.Migrate(files[1], pipe)
-	errs = pipep.ReadErrors(pipe)
-	if len(errs) > 0 {
-		t.Fatal(errs)
+	err = d.Migrate(files[1])
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	pipe = pipep.New()
-	go d.Migrate(files[4], pipe)
-	errs = pipep.ReadErrors(pipe)
-	if len(errs) == 0 {
+	err = d.Migrate(files[4])
+	if err == nil {
 		t.Error("Expected test case to fail")
 	}
 
@@ -221,4 +210,12 @@ func dropTestTables(t *testing.T, db *sql.DB) {
 		t.Fatal(err)
 	}
 
+}
+
+func getenvDefault(varname, defaultValue string) string {
+	v := os.Getenv(varname)
+	if v == "" {
+		return defaultValue
+	}
+	return v
 }

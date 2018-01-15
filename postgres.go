@@ -183,16 +183,10 @@ func txDisabled(opts []string) bool {
 	return false
 }
 
-type factory struct{}
-
-func (f factory) New(url string) (driver.Driver, error) {
-	return Open(url)
-}
-
 func init() {
 	// According to the PostgreSQL documentation (section 32.1.1.2), postgres
 	// library supports two URI schemes: postgresql:// and postgres://
 	// https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNSTRING
-	driver.Register("postgres", "sql", fileTemplate, factory{})
-	driver.Register("postgresql", "sql", fileTemplate, factory{})
+	driver.Register("postgres", "sql", fileTemplate, Open)
+	driver.Register("postgresql", "sql", fileTemplate, Open)
 }

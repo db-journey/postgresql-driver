@@ -13,7 +13,7 @@ import (
 	"github.com/lib/pq"
 )
 
-var _ driver.Driver = (*Driver)(nil)
+var fileTemplate = []byte(``) // TODO
 
 // Driver is the postgres driver for journey.
 type Driver struct {
@@ -23,21 +23,19 @@ type Driver struct {
 const tableName = "public.schema_migrations"
 const txDisabledOption = "disable_ddl_transaction"
 
-// make sure our driver still implements the driver.Driver interface
-var _ driver.Driver = (*Driver)(nil)
-
-// Initialize opens and verifies the database handle.
-func (driver *Driver) Initialize(url string) error {
+// Open opens and verifies the database handle.
+func Open(url string) (driver.Driver, error) {
+	driver := &Driver{}
 	db, err := sql.Open("postgres", url)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := db.Ping(); err != nil {
-		return err
+		return nil, err
 	}
 	driver.db = db
 
-	return driver.ensureVersionTableExists()
+	return driver, driver.ensureVersionTableExists()
 }
 
 // SetDB replaces the current database handle.
@@ -75,17 +73,6 @@ func (driver *Driver) ensureVersionTableExists() error {
 
 	_, err := driver.db.Exec("ALTER TABLE " + tableName + " ALTER COLUMN version TYPE bigint USING version::bigint")
 	return err
-}
-
-// FilenameExtension returns "sql".
-func (driver *Driver) FilenameExtension() string {
-	return "sql"
-}
-
-// FileTemplate ...
-func (driver *Driver) FileTemplate() []byte {
-	// TODO ?
-	return []byte("")
 }
 
 // Migrate performs the migration of any one file.
@@ -196,11 +183,16 @@ func txDisabled(opts []string) bool {
 	return false
 }
 
+type factory struct{}
+
+func (f factory) New(url string) (driver.Driver, error) {
+	return Open(url)
+}
+
 func init() {
 	// According to the PostgreSQL documentation (section 32.1.1.2), postgres
 	// library supports two URI schemes: postgresql:// and postgres://
 	// https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNSTRING
-	drv := Driver{}
-	driver.RegisterDriver("postgres", &drv)
-	driver.RegisterDriver("postgresql", &drv)
+	driver.Register("postgres", "sql", fileTemplate, factory{})
+	driver.Register("postgresql", "sql", fileTemplate, factory{})
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/db-journey/migrate/direction"
+	"github.com/db-journey/migrate/driver"
 	"github.com/db-journey/migrate/file"
 )
 
@@ -39,13 +40,9 @@ func TestMigrate(t *testing.T) {
 }
 
 func migrate(t *testing.T, driverURL string) {
-	d := &Driver{}
-	if err := d.Initialize(driverURL); err != nil {
-		t.Fatal(err)
-	}
-
-	// testing idempotency: second call should be a no-op, since table already exists
-	if err := d.Initialize(driverURL); err != nil {
+	var err error
+	var d driver.Driver
+	if d, err = Open(driverURL); err != nil {
 		t.Fatal(err)
 	}
 
@@ -111,7 +108,7 @@ func migrate(t *testing.T, driverURL string) {
 	}
 
 	// should create table yolo
-	err := d.Migrate(files[0])
+	err = d.Migrate(files[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +142,7 @@ func migrate(t *testing.T, driverURL string) {
 	colors := []string{}
 	expectedColors := []string{"red", "blue", "green"}
 
-	rows, err := d.db.Query("SELECT unnest(enum_range(NULL::colors));")
+	rows, err := d.(*Driver).db.Query("SELECT unnest(enum_range(NULL::colors));")
 	if err != nil {
 		t.Error(err)
 		return

@@ -13,7 +13,7 @@ import (
 	"github.com/lib/pq"
 )
 
-var _ driver.Driver = (*Driver)(nil)
+var fileTemplate = []byte(``) // TODO
 
 // Driver is the postgres driver for journey.
 type Driver struct {
@@ -23,21 +23,19 @@ type Driver struct {
 const tableName = "public.schema_migrations"
 const txDisabledOption = "disable_ddl_transaction"
 
-// make sure our driver still implements the driver.Driver interface
-var _ driver.Driver = (*Driver)(nil)
-
-// Initialize opens and verifies the database handle.
-func (driver *Driver) Initialize(url string) error {
+// Open opens and verifies the database handle.
+func Open(url string) (driver.Driver, error) {
+	driver := &Driver{}
 	db, err := sql.Open("postgres", url)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := db.Ping(); err != nil {
-		return err
+		return nil, err
 	}
 	driver.db = db
 
-	return driver.ensureVersionTableExists()
+	return driver, driver.ensureVersionTableExists()
 }
 
 // SetDB replaces the current database handle.
@@ -77,46 +75,31 @@ func (driver *Driver) ensureVersionTableExists() error {
 	return err
 }
 
-// FilenameExtension returns "sql".
-func (driver *Driver) FilenameExtension() string {
-	return "sql"
-}
-
 // Migrate performs the migration of any one file.
-func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
-	defer close(pipe)
-	var err error
-	pipe <- f
-
-	tx, err := driver.db.Begin()
+func (driver *Driver) Migrate(f file.File) (err error) {
+	var tx *sql.Tx
+	tx, err = driver.db.Begin()
 	if err != nil {
-		pipe <- err
-		return
+		return err
 	}
 	defer func() {
 		if err != nil {
-			if err := tx.Rollback(); err != nil {
-				pipe <- err
-			}
+			tx.Rollback()
 		}
-
 	}()
 
 	if f.Direction == direction.Up {
 		if _, err = tx.Exec("INSERT INTO "+tableName+" (version) VALUES ($1)", f.Version); err != nil {
-			pipe <- err
-			return
+			return err
 		}
 	} else if f.Direction == direction.Down {
 		if _, err = tx.Exec("DELETE FROM "+tableName+" WHERE version=$1", f.Version); err != nil {
-			pipe <- err
-			return
+			return err
 		}
 	}
 
 	if err = f.ReadContent(); err != nil {
-		pipe <- err
-		return
+		return err
 	}
 
 	if txDisabled(fileOptions(f.Content)) {
@@ -131,17 +114,12 @@ func (driver *Driver) Migrate(f file.File, pipe chan interface{}) {
 		if err == nil && offset >= 0 {
 			lineNo, columnNo := file.LineColumnFromOffset(f.Content, offset-1)
 			errorPart := file.LinesBeforeAndAfter(f.Content, lineNo, 5, 5, true)
-			pipe <- fmt.Errorf("%s %v: %s in line %v, column %v:\n\n%s", pqErr.Severity, pqErr.Code, pqErr.Message, lineNo, columnNo, string(errorPart))
-		} else {
-			pipe <- fmt.Errorf("%s %v: %s", pqErr.Severity, pqErr.Code, pqErr.Message)
+			return fmt.Errorf("%s %v: %s in line %v, column %v:\n\n%s", pqErr.Severity, pqErr.Code, pqErr.Message, lineNo, columnNo, string(errorPart))
 		}
-		return
+		return fmt.Errorf("%s %v: %s", pqErr.Severity, pqErr.Code, pqErr.Message)
 	}
 
-	if err := tx.Commit(); err != nil {
-		pipe <- err
-		return
-	}
+	return tx.Commit()
 }
 
 // Version returns the current migration version.
@@ -209,7 +187,6 @@ func init() {
 	// According to the PostgreSQL documentation (section 32.1.1.2), postgres
 	// library supports two URI schemes: postgresql:// and postgres://
 	// https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNSTRING
-	drv := Driver{}
-	driver.RegisterDriver("postgres", &drv)
-	driver.RegisterDriver("postgresql", &drv)
+	driver.Register("postgres", "sql", fileTemplate, Open)
+	driver.Register("postgresql", "sql", fileTemplate, Open)
 }

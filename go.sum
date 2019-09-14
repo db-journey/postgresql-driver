@@ -1,0 +1,4 @@
+github.com/db-journey/migrate v2.0.0+incompatible h1:heh263YgHne8Fp+XvgDf427MjfB4jV1W19O+7vqU3pU=
+github.com/db-journey/migrate v2.0.0+incompatible/go.mod h1:mJTA43EQJ94pqUpLXH0qsTgn7OnO56iLy2q5ywaYUy4=
+github.com/lib/pq v1.2.0 h1:LXpIM/LZ5xGFhOpXAQUIMM1HdyqzVYM13zNdjCEEcA0=
+github.com/lib/pq v1.2.0/go.mod h1:5WUZQaWbwv1U+lTReE5YruASi9Al49XbQIvNi/34Woo=
